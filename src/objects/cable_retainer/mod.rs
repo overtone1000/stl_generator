@@ -1,10 +1,12 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, ops::Index};
 
 use stl_io::{IndexedMesh, IndexedTriangle, Normal, Vertex};
 
+use crate::commons::normal_calculation::calculate_normal_from_indices;
+
 pub fn create_top()-> Result<IndexedMesh,String> {
 
-    const STEPS:usize=100;
+    const STEPS:usize=10;
 
     let mut vertices:Vec<Vertex>=Vec::new();
     let mut faces:Vec<IndexedTriangle>=Vec::new();
@@ -19,7 +21,7 @@ pub fn create_top()-> Result<IndexedMesh,String> {
         let xf=(x as f32)/((STEPS-1) as f32);
         let yf=(y as f32)/((STEPS-1) as f32);
 
-        let z = f32::max(0.0,xf-0.5)*f32::max(0.0,yf-0.5);
+        let z = (xf-0.5).powi(2);
 
         Vertex::new([xf,yf,z])
     };
@@ -39,6 +41,8 @@ pub fn create_top()-> Result<IndexedMesh,String> {
         }
     }
 
+    
+
     for y in 0..STEPS-1
     {
         for x in 0..STEPS-1
@@ -48,15 +52,16 @@ pub fn create_top()-> Result<IndexedMesh,String> {
             let x0y1 = calculate_index(x,y+1);
             let x1y1 = calculate_index(x+1,y+1);
 
-            faces.push(IndexedTriangle{
-                normal:Normal::new([0.0,0.0,0.1]),
-                vertices:[x0y0,x1y0,x0y1]
-            });
+            let triangles=
+            [
+                [x0y0,x1y0,x0y1],
+                [x0y1,x1y0,x1y1]
+            ];
 
-            faces.push(IndexedTriangle{
-                normal:Normal::new([0.0,0.0,0.1]),
-                vertices:[x1y1,x1y0,x0y1]
-            });
+            for t in triangles
+            {
+                faces.push((IndexedTriangle { normal: calculate_normal_from_indices(t,&vertices), vertices: t }))
+            }
         }
     }
 

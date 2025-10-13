@@ -8,3 +8,4 @@ name = "stl_generator"
 
 [dependencies]
 stl_io = "^0"
+vec3-rs = "^0"

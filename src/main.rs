@@ -1,7 +1,6 @@
 use std::fs::OpenOptions;
-use stl_io::{Normal, Vertex};
 
-use stl_generator::objects::{cable_retainer::create_top, IndexedMeshIterator};
+use stl_generator::{commons::indexed_mesh_iterator::IndexedMeshIterator, objects::cable_retainer::create_top};
 
 fn main()->Result<(),Box<dyn std::error::Error>> {
     
