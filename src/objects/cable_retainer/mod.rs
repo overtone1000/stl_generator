@@ -1,67 +1,64 @@
 use std::{collections::BTreeMap, ops::Index};
 
-use stl_io::{IndexedMesh, IndexedTriangle, Normal, Vertex};
+use stl_io::{IndexedMesh, IndexedTriangle, Normal, Vector, Vertex};
 
-use crate::commons::normal_calculation::calculate_normal_from_indices;
+use crate::commons::{normal_calculation::calculate_normal_from_indices, polygon::create_clockwise_polygon};
 
 pub fn create_top()-> Result<IndexedMesh,String> {
 
-    const STEPS:usize=10;
+    const STEPS:usize=100;
 
     let mut vertices:Vec<Vertex>=Vec::new();
     let mut faces:Vec<IndexedTriangle>=Vec::new();
 
-    let calculate_index = |x:usize,y:usize|->usize
+    let calculate_index = |step_index:usize,x_index:usize|->usize
     {
-        x+y*STEPS
+        x_index+step_index*2
     };
 
-    let get_top_vertex=|x:usize,y:usize|->Vertex
+    for step_index in 0..STEPS
     {
-        let xf=(x as f32)/((STEPS-1) as f32);
-        let yf=(y as f32)/((STEPS-1) as f32);
+        let step_frac=(step_index as f32)/((STEPS-1) as f32);
 
-        let z = (xf-0.5).powi(2);
+        let z:f32=-f32::cos(step_frac*std::f32::consts::PI*2.0)/2.0+1.0;
+        let y:f32=step_frac+f32::sin(step_frac*std::f32::consts::PI*4.0)/(8.0*std::f32::consts::PI);
 
-        Vertex::new([xf,yf,z])
-    };
+        println!("{}:{}",y,z);
 
-    for y in 0..STEPS
-    {
-        for x in 0..STEPS
+        for x_index in 0..=1
         {
-            let index=calculate_index(x,y);
+            let x=match x_index
+            {
+                0=>0f32,
+                1=>1f32,
+                _=>panic!("Unexpected value")
+            };
+
+            let index=calculate_index(step_index,x_index);
 
             if index!=vertices.len()
             {
-                return Err(format!("Vertex index determination is incorrect. Expected index {} but found {}",index,vertices.len()));
+                panic!("Unexpected index {}, expected {}", vertices.len(),index);
             }
 
-            vertices.push(get_top_vertex(x,y));
+            vertices.push(Vector::new([x,y,z]));
         }
     }
 
-    
-
-    for y in 0..STEPS-1
+    for step_index in 0..STEPS-1
     {
-        for x in 0..STEPS-1
-        {
-            let x0y0 = calculate_index(x,y);
-            let x1y0 = calculate_index(x+1,y);
-            let x0y1 = calculate_index(x,y+1);
-            let x1y1 = calculate_index(x+1,y+1);
-
-            let triangles=
+        let indices=Vec::from(
             [
-                [x0y0,x1y0,x0y1],
-                [x0y1,x1y0,x1y1]
-            ];
+                calculate_index(step_index,0),
+                calculate_index(step_index,1),
+                calculate_index(step_index+1,1),
+                calculate_index(step_index+1,0),                
+            ]
+        );
 
-            for t in triangles
-            {
-                faces.push((IndexedTriangle { normal: calculate_normal_from_indices(t,&vertices), vertices: t }))
-            }
+        for face in create_clockwise_polygon(indices, &vertices)
+        {
+            faces.push(face);
         }
     }
 
