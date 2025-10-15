@@ -26,22 +26,36 @@ pub fn create_cable_retainer(
         x_index+step_index*2
     };
 
-    let get_top_z_frac = |step_frac:f32|
+    let get_y_z_fracs = |step_frac:f32|
     {
-        -(f32::cos(step_frac*std::f32::consts::PI*2.0)-1.0)/2.0
+        if step_frac < 0.25
+        {
+            println!("<0.25");
+            let minifrac=step_frac/0.25;
+            (
+                0.25*f32::sin(minifrac*std::f32::consts::FRAC_PI_2),
+                0.5*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2))
+            )
+        }
+        else if step_frac < 0.75
+        {
+            let minifrac=(step_frac-0.25)/0.5;
+            println!("<0.75, {}, {}", minifrac, f32::cos(minifrac*std::f32::consts::PI));
+            (
+                0.25+0.5*((1.0-f32::cos(minifrac*std::f32::consts::PI))/2.0),
+                0.5+0.5*f32::sin(minifrac*std::f32::consts::PI)
+            )
+        }
+        else
+        {
+            println!(">=0.75");
+            let minifrac=(step_frac-0.75)/0.25;
+            (
+                0.75+0.25*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2)),
+                0.5*(1.0-f32::sin(minifrac*std::f32::consts::FRAC_PI_2))
+            )
+        }
     };
-
-    let get_top_y_frac = |step_frac:f32|
-    {
-        step_frac+f32::sin(step_frac*std::f32::consts::PI*4.0)/(8.0*std::f32::consts::PI)
-    };
-
-    assert_eq!(get_top_z_frac(0.0),0.0);
-    assert_eq!(get_top_z_frac(0.5),1.0);
-    assert_eq!(get_top_z_frac(1.0),0.0);
-    assert_eq!(get_top_y_frac(0.0),0.0);
-    assert_eq!(get_top_y_frac(0.5),0.5);
-    assert_eq!(get_top_y_frac(1.0),1.0);
 
     //Top
     {
@@ -49,8 +63,10 @@ pub fn create_cable_retainer(
         {
             let step_frac=(step_index as f32)/((STEPS-1) as f32);
 
-            let z:f32=get_top_z_frac(step_frac)*total_height+floor;
-            let y:f32=get_top_y_frac(step_frac)*total_width;
+            let (y,z) = get_y_z_fracs(step_frac);
+
+            let z:f32=z*total_height+floor;
+            let y:f32=y*total_width-total_width/2.0;
 
             for x_index in 0..=1
             {
@@ -93,7 +109,7 @@ pub fn create_cable_retainer(
         vertices,
         faces
     });
-    */
+    */    
 
     const TOP_VERTEX_COUNT:usize=STEPS*2;
     assert_eq!(TOP_VERTEX_COUNT,vertices.len());
