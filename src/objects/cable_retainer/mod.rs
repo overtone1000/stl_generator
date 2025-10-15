@@ -4,6 +4,8 @@ use stl_io::{IndexedMesh, IndexedTriangle, Normal, Vector, Vertex};
 
 use crate::commons::{normal_calculation::calculate_normal_from_indices, polygon::create_clockwise_polygon};
 
+const PERTURBATION:f32=0.001;
+
 pub fn create_cable_retainer(
     wall_thickness:f32,
     cable_diameter:f32,
@@ -11,7 +13,10 @@ pub fn create_cable_retainer(
     side_transition_length:f32
 )-> Result<IndexedMesh,String> {
 
-    const STEPS:usize=100;
+    const STEPS:usize=50;
+    const SIDE_VERTEX_STEPS:usize=20;
+
+    let cable_diameter = cable_diameter+PERTURBATION;
 
     let total_height=cable_diameter+wall_thickness; //Just cover at top
     let floor=-cable_diameter/2.0;
@@ -28,33 +33,38 @@ pub fn create_cable_retainer(
 
     let get_y_z_fracs = |step_frac:f32|
     {
-        if step_frac < 0.25
+        let mut retval=
         {
-            println!("<0.25");
-            let minifrac=step_frac/0.25;
-            (
-                0.25*f32::sin(minifrac*std::f32::consts::FRAC_PI_2),
-                0.5*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2))
-            )
-        }
-        else if step_frac < 0.75
-        {
-            let minifrac=(step_frac-0.25)/0.5;
-            println!("<0.75, {}, {}", minifrac, f32::cos(minifrac*std::f32::consts::PI));
-            (
-                0.25+0.5*((1.0-f32::cos(minifrac*std::f32::consts::PI))/2.0),
-                0.5+0.5*f32::sin(minifrac*std::f32::consts::PI)
-            )
-        }
-        else
-        {
-            println!(">=0.75");
-            let minifrac=(step_frac-0.75)/0.25;
-            (
-                0.75+0.25*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2)),
-                0.5*(1.0-f32::sin(minifrac*std::f32::consts::FRAC_PI_2))
-            )
-        }
+            if step_frac < 0.25
+            {
+                println!("<0.25");
+                let minifrac=step_frac/0.25;
+                (
+                    0.25*f32::sin(minifrac*std::f32::consts::FRAC_PI_2),
+                    0.5*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2))
+                )
+            }
+            else if step_frac < 0.75
+            {
+                let minifrac=(step_frac-0.25)/0.5;
+                println!("<0.75, {}, {}", minifrac, f32::cos(minifrac*std::f32::consts::PI));
+                (
+                    0.25+0.5*((1.0-f32::cos(minifrac*std::f32::consts::PI))/2.0),
+                    0.5+0.5*f32::sin(minifrac*std::f32::consts::PI)
+                )
+            }
+            else
+            {
+                println!(">=0.75");
+                let minifrac=(step_frac-0.75)/0.25;
+                (
+                    0.75+0.25*(1.0-f32::cos(minifrac*std::f32::consts::FRAC_PI_2)),
+                    0.5*(1.0-f32::sin(minifrac*std::f32::consts::FRAC_PI_2))
+                )
+            }
+        };
+
+        retval
     };
 
     //Top
@@ -114,8 +124,6 @@ pub fn create_cable_retainer(
     const TOP_VERTEX_COUNT:usize=STEPS*2;
     assert_eq!(TOP_VERTEX_COUNT,vertices.len());
 
-    const SIDE_VERTEX_STEPS:usize=25;
-
     let calculate_side_index = |x_index:usize,step_index:usize,sub_step_index:usize |
     {
         if sub_step_index == 0 {
@@ -151,8 +159,9 @@ pub fn create_cable_retainer(
                     assert_eq!(side_index,vertices.len());
 
                     let x= top_vertex[0]+side_frac*x_dir*side_transition_length;
+                    
                     let z = (top_vertex[2]-floor)*(f32::cos(side_frac*std::f32::consts::PI)+1.0)/2.0+floor;
-
+                    
                     vertices.push(Vector::new(
                         [
                             x,
@@ -197,8 +206,12 @@ pub fn create_cable_retainer(
 
     //Bottom
     {
+        const BOTTOM_PERTUBRATION:f32=1.0;
+
+        let bottom_index_start=vertices.len();
+
         const SUB_STEP_INDEX:usize = SIDE_VERTEX_STEPS-1;
-        let indices = Vec::from(
+        let top_of_bottom_indices = Vec::from(
             [
                 calculate_side_index(0,0,SUB_STEP_INDEX),
                 calculate_side_index(0,STEPS-1,SUB_STEP_INDEX),
@@ -206,13 +219,91 @@ pub fn create_cable_retainer(
                 calculate_side_index(1,0,SUB_STEP_INDEX),
             ]
         );
-        
-        for face in create_clockwise_polygon(indices, &vertices)
+
+        for top_of_bottom_index in &top_of_bottom_indices
         {
-            faces.push(face);
+            let top_vertex=vertices.get(top_of_bottom_index.clone()).expect("Should exist");
+            vertices.push(
+                Vector::new(
+                    [
+                        top_vertex[0],
+                        top_vertex[1],
+                        top_vertex[2]-BOTTOM_PERTUBRATION
+                    ]
+                )
+            )
         }
 
-        println!("{:?}",faces);
+        //Bottom bottom
+        let bottom_bottom_indices = Vec::from(
+            [
+                bottom_index_start,
+                bottom_index_start+1,
+                bottom_index_start+2,
+                bottom_index_start+3
+            ]
+        );
+
+        //Front bottom
+        let front_bottom_indices = Vec::from(
+            [
+                bottom_index_start+1,
+                top_of_bottom_indices[1],
+                top_of_bottom_indices[2],
+                bottom_index_start+2,
+            ]
+        );
+
+        //Back bottom
+        let back_bottom_indices = Vec::from(
+            [
+                bottom_index_start+3,
+                top_of_bottom_indices[3],
+                top_of_bottom_indices[0],
+                bottom_index_start,
+            ]
+        );
+
+        //Right bottom
+        let right_bottom_indices = Vec::from(
+            [
+                bottom_index_start,
+                top_of_bottom_indices[0],
+                top_of_bottom_indices[1],
+                bottom_index_start+1,
+            ]
+        );
+
+        //Left bottom
+        let left_bottom_indices = Vec::from(
+            [
+                bottom_index_start+2,
+                top_of_bottom_indices[2],
+                top_of_bottom_indices[3],
+                bottom_index_start+3,
+            ]
+        );
+
+        for polygon in [
+            bottom_bottom_indices,
+            front_bottom_indices,
+            back_bottom_indices,
+            right_bottom_indices,
+            left_bottom_indices
+        ]
+        {
+            for face in create_clockwise_polygon(polygon, &vertices)
+            {
+                faces.push(face);
+            }
+        }
+    }
+
+    const CHECK:usize=0;
+    println!("{:?}",faces.get(CHECK));
+    for n in 0..3
+    {
+        println!("{:?}",vertices.get(faces.get(CHECK).expect("Should exist").vertices[n]));
     }
 
     let retval = IndexedMesh {
@@ -220,14 +311,13 @@ pub fn create_cable_retainer(
         faces
     };
     
-    
-    /*
     match retval.validate()
     {
-        Ok(_)=>Ok(retval),
-        Err(e)=>Err(format!("{:?}",e))
+        Ok(_)=>(),
+        Err(e)=>{
+            eprintln!("{:?}",e)
+        }
     }
-    */
 
     Ok(retval)
 }
