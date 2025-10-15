@@ -16,7 +16,7 @@ pub fn create_cable_retainer(
     let total_height=cable_diameter+wall_thickness; //Just cover at top
     let floor=-cable_diameter/2.0;
     //let ceiling=total_height-floor;
-    let total_width=total_height*2.0;
+    let total_width=(cable_diameter+wall_thickness*2.0)*2.0;
 
     let mut vertices:Vec<Vertex>=Vec::new();
     let mut faces:Vec<IndexedTriangle>=Vec::new();

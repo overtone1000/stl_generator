@@ -4,10 +4,10 @@ use stl_generator::{commons::indexed_mesh_iterator::IndexedMeshIterator, objects
 
 fn main()->Result<(),Box<dyn std::error::Error>> {
     
-    let mesh = create_cable_retainer(2.0,10.0,40.0,10.0)?;
+    let mesh = create_cable_retainer(2.0,10.0,20.0,10.0)?;
     let meshiterator = IndexedMeshIterator::new(&mesh);
 
-    let path = "output/mesh.stl";
+    let path = "../Hardware/OpenSCAD/PSIR Free Mount/retainer.stl";
     if std::fs::exists(path)? {
         std::fs::remove_file(path)?;
     }
