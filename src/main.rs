@@ -1,10 +1,10 @@
 use std::fs::OpenOptions;
 
-use stl_generator::{commons::indexed_mesh_iterator::IndexedMeshIterator, objects::cable_retainer::create_top};
+use stl_generator::{commons::indexed_mesh_iterator::IndexedMeshIterator, objects::cable_retainer::create_cable_retainer};
 
 fn main()->Result<(),Box<dyn std::error::Error>> {
     
-    let mesh = create_top()?;
+    let mesh = create_cable_retainer(2.0,10.0,40.0,10.0)?;
     let meshiterator = IndexedMeshIterator::new(&mesh);
 
     let path = "output/mesh.stl";
