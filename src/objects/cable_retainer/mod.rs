@@ -13,8 +13,8 @@ pub fn create_cable_retainer(
     side_transition_length:f32
 )-> Result<IndexedMesh,String> {
 
-    const STEPS:usize=20;
-    const SIDE_VERTEX_STEPS:usize=2;
+    const STEPS:usize=50;
+    const SIDE_VERTEX_STEPS:usize=20;
 
     let cable_diameter = cable_diameter+PERTURBATION;
 
@@ -130,9 +130,10 @@ pub fn create_cable_retainer(
             calculate_top_index(step_index,x_index)
         }
         else {
-            TOP_VERTEX_COUNT+x_index*STEPS*(SIDE_VERTEX_STEPS-1)+step_index*(SIDE_VERTEX_STEPS-1)+(sub_step_index-1)
+            TOP_VERTEX_COUNT+x_index*STEPS*(SIDE_VERTEX_STEPS-1)+step_index*(SIDE_VERTEX_STEPS-1)+sub_step_index-1
         }
     };
+
     //Sides
     {
         for x_index in 0..=1
@@ -204,116 +205,56 @@ pub fn create_cable_retainer(
         }
     }
 
+    const PRIOR_VERTEX_COUNT:usize=TOP_VERTEX_COUNT+(SIDE_VERTEX_STEPS-1)*STEPS*2;
+    assert_eq!(PRIOR_VERTEX_COUNT,vertices.len());
+
+    //faces.clear();
     //Bottom
     {
-        const SUB_STEP_INDEX:usize = SIDE_VERTEX_STEPS-1;
+        let mut left=Vec::new();
+        let mut top=Vec::new();
+        let mut right=Vec::new();
+        let mut bottom=Vec::new();
 
-        /*/
-        const BOTTOM_PERTUBRATION:f32=1.0;
+        const SUB_STEP_END:usize=SIDE_VERTEX_STEPS-1;
 
-        let bottom_index_start=vertices.len();
-
-        
-        let top_of_bottom_indices = Vec::from(
-            [
-                calculate_side_index(0,0,SUB_STEP_INDEX),
-                calculate_side_index(0,STEPS-1,SUB_STEP_INDEX),
-                calculate_side_index(1,STEPS-1,SUB_STEP_INDEX),
-                calculate_side_index(1,0,SUB_STEP_INDEX),
-            ]
-        );
-
-        for top_of_bottom_index in &top_of_bottom_indices
+        for step_index in 0..STEPS
         {
-            let top_vertex=vertices.get(top_of_bottom_index.clone()).expect("Should exist");
-            vertices.push(
-                Vector::new(
-                    [
-                        top_vertex[0],
-                        top_vertex[1],
-                        top_vertex[2]-BOTTOM_PERTUBRATION
-                    ]
-                )
-            )
+            let i_inverse=STEPS-step_index-1;
+            left.push(calculate_side_index(0,step_index,SUB_STEP_END));
+            right.push(calculate_side_index(1,i_inverse,SUB_STEP_END));
         }
 
-        //Bottom bottom
-        let bottom_bottom_indices = Vec::from(
-            [
-                bottom_index_start,
-                bottom_index_start+1,
-                bottom_index_start+2,
-                bottom_index_start+3
-            ]
-        );
-
-        //Front bottom
-        let front_bottom_indices = Vec::from(
-            [
-                bottom_index_start+1,
-                top_of_bottom_indices[1],
-                top_of_bottom_indices[2],
-                bottom_index_start+2,
-            ]
-        );
-
-        //Back bottom
-        let back_bottom_indices = Vec::from(
-            [
-                bottom_index_start+3,
-                top_of_bottom_indices[3],
-                top_of_bottom_indices[0],
-                bottom_index_start,
-            ]
-        );
-
-        //Right bottom
-        let right_bottom_indices = Vec::from(
-            [
-                bottom_index_start,
-                top_of_bottom_indices[0],
-                top_of_bottom_indices[1],
-                bottom_index_start+1,
-            ]
-        );
-
-        //Left bottom
-        let left_bottom_indices = Vec::from(
-            [
-                bottom_index_start+2,
-                top_of_bottom_indices[2],
-                top_of_bottom_indices[3],
-                bottom_index_start+3,
-            ]
-        );
-
-        for polygon in [
-            bottom_bottom_indices,
-            front_bottom_indices,
-            back_bottom_indices,
-            right_bottom_indices,
-            left_bottom_indices
-        ]
+        for sub_step_index in 0..SIDE_VERTEX_STEPS
         {
-            for face in create_clockwise_polygon(polygon, &vertices)
-            {
-                faces.push(face);
-            }
+            let i_inverse=SIDE_VERTEX_STEPS-sub_step_index-1;
+            top.push(calculate_side_index(1,0,i_inverse));
+            bottom.push(calculate_side_index(0,STEPS-1,i_inverse));
         }
-        */
 
-        for step_index in 0..STEPS-1
+        for sub_step_index in 0..SIDE_VERTEX_STEPS
         {
-            let mut indices=Vec::new();
-            indices.push(calculate_side_index(0,step_index,SUB_STEP_INDEX));
-            indices.push(calculate_side_index(0,step_index+1,SUB_STEP_INDEX));
-            indices.push(calculate_side_index(1,step_index+1,SUB_STEP_INDEX));
-            indices.push(calculate_side_index(1,step_index,SUB_STEP_INDEX));
-            for face in create_clockwise_polygon(indices, &vertices)
-            {
-                faces.push(face);
-            }
-        }   
+            top.push(calculate_side_index(0,0,sub_step_index));
+            bottom.push(calculate_side_index(1,STEPS-1,sub_step_index));
+        }
+
+        let mut total=Vec::new();
+
+        println!("{}",vertices.len());
+        println!("{:?}", left);
+        println!("{:?}", top);
+        println!("{:?}", right);
+        println!("{:?}", bottom);
+
+        total.append(&mut left);
+        total.append(&mut bottom);
+        total.append(&mut right);
+        total.append(&mut top);
+
+        for face in create_clockwise_polygon(total, &vertices)
+        {
+            faces.push(face);
+        }
     }
 
     const CHECK:usize=0;
