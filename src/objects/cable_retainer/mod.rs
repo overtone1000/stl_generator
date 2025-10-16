@@ -13,8 +13,8 @@ pub fn create_cable_retainer(
     side_transition_length:f32
 )-> Result<IndexedMesh,String> {
 
-    const STEPS:usize=50;
-    const SIDE_VERTEX_STEPS:usize=20;
+    const STEPS:usize=20;
+    const SIDE_VERTEX_STEPS:usize=2;
 
     let cable_diameter = cable_diameter+PERTURBATION;
 
@@ -160,7 +160,7 @@ pub fn create_cable_retainer(
 
                     let x= top_vertex[0]+side_frac*x_dir*side_transition_length;
                     
-                    let z = (top_vertex[2]-floor)*(f32::cos(side_frac*std::f32::consts::PI)+1.0)/2.0+floor;
+                    let mut z = (top_vertex[2]-floor)*(f32::cos(side_frac*std::f32::consts::PI)+1.0)/2.0+floor;
                     
                     vertices.push(Vector::new(
                         [
@@ -206,11 +206,14 @@ pub fn create_cable_retainer(
 
     //Bottom
     {
+        const SUB_STEP_INDEX:usize = SIDE_VERTEX_STEPS-1;
+
+        /*/
         const BOTTOM_PERTUBRATION:f32=1.0;
 
         let bottom_index_start=vertices.len();
 
-        const SUB_STEP_INDEX:usize = SIDE_VERTEX_STEPS-1;
+        
         let top_of_bottom_indices = Vec::from(
             [
                 calculate_side_index(0,0,SUB_STEP_INDEX),
@@ -297,6 +300,20 @@ pub fn create_cable_retainer(
                 faces.push(face);
             }
         }
+        */
+
+        for step_index in 0..STEPS-1
+        {
+            let mut indices=Vec::new();
+            indices.push(calculate_side_index(0,step_index,SUB_STEP_INDEX));
+            indices.push(calculate_side_index(0,step_index+1,SUB_STEP_INDEX));
+            indices.push(calculate_side_index(1,step_index+1,SUB_STEP_INDEX));
+            indices.push(calculate_side_index(1,step_index,SUB_STEP_INDEX));
+            for face in create_clockwise_polygon(indices, &vertices)
+            {
+                faces.push(face);
+            }
+        }   
     }
 
     const CHECK:usize=0;
